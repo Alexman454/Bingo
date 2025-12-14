@@ -32,7 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import com.example.bingo.ui.theme.BingoTheme
-
+import com.example.bingo.ui.theme.TaskTextStyle
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,7 +58,13 @@ fun SetBackgroundColor(color: Color){
 }
 
 @Composable
-fun TaskBlockTemplate(color: Color, radius: Int = 1,offsetX: Int = 0,offsetY: Dp = 0.dp){
+fun TaskBlockTemplate(
+    color: Color,
+    radius: Int = 1,
+    offsetX: Int = 0,
+    offsetY: Dp = 0.dp,
+    payload: String = "Placeholder Text"
+){
     val configuration = Resources.getSystem().configuration
     val widthDp = configuration.screenWidthDp
     //val heightDp = configuration.screenHeightDp
@@ -68,9 +74,10 @@ fun TaskBlockTemplate(color: Color, radius: Int = 1,offsetX: Int = 0,offsetY: Dp
             .absoluteOffset(x = offsetX.dp,y = offsetY),
         shadowElevation = 4.dp
     ){
-        Box(modifier = Modifier.size(width = (widthDp.dp - 16.dp), height = 100.dp))
-    }
-}
+        Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+        ){
+            Text(text = payload, style = TaskTextStyle)
+    }}}
 
 @Composable
 fun getStatusBarH(): Dp {
