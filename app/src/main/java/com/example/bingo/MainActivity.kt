@@ -112,7 +112,7 @@ fun MainScreen(){
                 when (item){
                     is DisplayableTask.Simple -> TaskBlockTemplate(color = colorTaskBlock, payload = item.simpleTask,onDelete = { task ->
                         displayTasks.removeIf { it is DisplayableTask.Simple && it.simpleTask == task } })
-                    is DisplayableTask.Advanced -> AdvancedTaskBlockTemplate(color = colorTaskBlock, payload = item.advancedTask)
+                    is DisplayableTask.Advanced -> AdvancedTaskBlockTemplate(color = colorTaskBlock, payload = item.advancedTask,displayTasks = displayTasks)
                 }
             }
         }
@@ -180,6 +180,7 @@ fun TaskBlockTemplate(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
+            containerColor = color, // цвет блока задачи
             title = { Text("Удалить задачу?") },
             text = { Text("Вы уверены, что хотите удалить эту задачу?") },
             confirmButton = {
@@ -201,8 +202,14 @@ fun TaskBlockTemplate(
 
 
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun AdvancedTaskBlockTemplate(color: Color, payload: AdvancedTask, radius: Int = 12) {
+fun AdvancedTaskBlockTemplate(
+    color: Color,
+    payload: AdvancedTask,
+    displayTasks: MutableList<DisplayableTask>,
+    radius: Int = 12
+) {
     Surface(
         color = color,
         shape = RoundedCornerShape(radius.dp),
@@ -213,28 +220,68 @@ fun AdvancedTaskBlockTemplate(color: Color, payload: AdvancedTask, radius: Int =
         shadowElevation = 4.dp
     ) {
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-            payload.getAllTasks().forEach { task ->
+            val tasks = remember { mutableStateListOf<Task>() }
+            LaunchedEffect(payload) {
+                tasks.clear()
+                tasks.addAll(payload.getAllTasks())
+            }
+
+            tasks.forEach { task ->
                 var isCompleted by remember { mutableStateOf(task.isCompleted) }
+                var showDeleteDialog by remember { mutableStateOf(false) }
 
                 Text(
                     text = task.text,
                     style = TaskTextStyle.copy(
-                        textDecoration = if (isCompleted)
-                            TextDecoration.LineThrough
-                        else
-                            TextDecoration.None
+                        textDecoration = if (isCompleted) TextDecoration.LineThrough else TextDecoration.None
                     ),
                     modifier = Modifier
+                        .fillMaxWidth()
                         .padding(vertical = 4.dp)
-                        .clickable {
-                            isCompleted = !isCompleted
-                            task.isCompleted = isCompleted
-                        }
+                        .combinedClickable(
+                            onClick = {
+                                isCompleted = !isCompleted
+                                task.isCompleted = isCompleted
+                            },
+                            onLongClick = { showDeleteDialog = true }
+                        )
                 )
+
+                if (showDeleteDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showDeleteDialog = false },
+                        containerColor = color, // цвет блока задачи
+                        title = { Text("Удалить подзадачу?") },
+                        text = { Text("Вы уверены, что хотите удалить эту подзадачу?") },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                payload.removeTask(task.id)
+                                tasks.remove(task)
+                                if (payload.getAllTasks().isEmpty()) {
+                                    displayTasks.removeIf { it is DisplayableTask.Advanced && it.advancedTask == payload }
+                                } else {
+                                    val index = displayTasks.indexOfFirst { it is DisplayableTask.Advanced && it.advancedTask == payload }
+                                    if (index != -1) {
+                                        displayTasks[index] = DisplayableTask.Advanced(payload)
+                                    }
+                                }
+                                showDeleteDialog = false
+                            }) {
+                                Text("Да")
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showDeleteDialog = false }) {
+                                Text("Нет")
+                            }
+                        }
+                    )
+                }
             }
         }
     }
 }
+
 
 
 
@@ -251,33 +298,34 @@ fun AddTaskDialog(
     displayTasks: MutableList<DisplayableTask>
 ) {
     val mainTaskText = remember { mutableStateOf("") }
-    val isSimpleTask = remember { mutableStateOf(true) } // true = Simple, false = Advanced
-    val subTasks = remember { mutableStateListOf("") } // Список текстов подзадач
+    val isSimpleTask = remember { mutableStateOf(true) }
+    val subTasks = remember { mutableStateListOf("") }
 
     if (showDialog.value) {
+        val colorTaskBlock = colorResource(id = R.color.task_block_option1)
+
         AlertDialog(
             onDismissRequest = {
                 showDialog.value = false
                 mainTaskText.value = ""
                 subTasks.clear()
             },
+            containerColor = colorTaskBlock, // цвет блока задачи
             title = { Text("Новая задача") },
             text = {
                 Column(modifier = Modifier.fillMaxWidth()) {
-                    // Основное поле для текста задачи
                     TextField(
                         value = mainTaskText.value,
                         onValueChange = { mainTaskText.value = it },
                         placeholder = { Text("Введите текст задачи") },
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Text, // Поддержка русского и английского
+                            keyboardType = KeyboardType.Text,
                             imeAction = ImeAction.Done
                         )
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Выбор типа задачи вертикально
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             RadioButton(
@@ -296,7 +344,6 @@ fun AddTaskDialog(
                         }
                     }
 
-                    // Если выбрана сложная задача, показываем поля для подзадач
                     if (!isSimpleTask.value) {
                         Spacer(modifier = Modifier.height(12.dp))
                         Text("Подзадачи:", style = MaterialTheme.typography.bodyMedium)
@@ -332,21 +379,14 @@ fun AddTaskDialog(
                 TextButton(onClick = {
                     if (mainTaskText.value.isNotBlank()) {
                         if (isSimpleTask.value) {
-                            // Простая задача
                             val task = SimpleTask(Task(id = displayTasks.size + 1, text = mainTaskText.value))
                             displayTasks.add(DisplayableTask.Simple(task))
                         } else {
-                            // Сложная задача
                             val advancedTask = AdvancedTask()
-                            // Основная задача как первая подзадача
                             advancedTask.addTask(Task(id = displayTasks.size + 1, text = mainTaskText.value))
-                            // Добавляем все непустые подзадачи
-                            subTasks.filter { it.isNotBlank() }.forEach { text ->
-                                advancedTask.addTask(Task(id = displayTasks.size + 1, text = text))
-                            }
+                            subTasks.filter { it.isNotBlank() }.forEach { text -> advancedTask.addTask(Task(id = displayTasks.size + 1, text = text)) }
                             displayTasks.add(DisplayableTask.Advanced(advancedTask))
                         }
-                        // Очистка состояния после добавления
                         mainTaskText.value = ""
                         subTasks.clear()
                         showDialog.value = false
