@@ -8,6 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -61,7 +62,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-
+import androidx.compose.foundation.combinedClickable
 class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -109,7 +110,8 @@ fun MainScreen(){
             ),verticalArrangement = Arrangement.spacedBy(12.dp)){
             items(displayTasks){item ->
                 when (item){
-                    is DisplayableTask.Simple -> TaskBlockTemplate(color = colorTaskBlock, payload = item.simpleTask)
+                    is DisplayableTask.Simple -> TaskBlockTemplate(color = colorTaskBlock, payload = item.simpleTask,onDelete = { task ->
+                        displayTasks.removeIf { it is DisplayableTask.Simple && it.simpleTask == task } })
                     is DisplayableTask.Advanced -> AdvancedTaskBlockTemplate(color = colorTaskBlock, payload = item.advancedTask)
                 }
             }
@@ -129,35 +131,74 @@ fun MainScreen(){
         }
         AddTaskDialog(showDialog = showDialog, displayTasks = displayTasks)
         }}
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TaskBlockTemplate(
     color: Color,
     radius: Int = 12,
-    payload: SimpleTask
+    payload: SimpleTask,
+    onDelete: (SimpleTask) -> Unit
 ){
-    val configuration = Resources.getSystem().configuration
     var isCompleted by remember { mutableStateOf(payload.task.isCompleted) }
-    //val heightDp = configuration.screenHeightDp
-    Surface(color = color,shape = RoundedCornerShape(radius.dp),
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    // Сначала сам блок задачи
+    Surface(
+        color = color,
+        shape = RoundedCornerShape(radius.dp),
         modifier = Modifier
             .fillMaxWidth()
             .defaultMinSize(minHeight = 56.dp)
             .wrapContentHeight()
             .animateContentSize()
-            .clickable {
-                isCompleted = !isCompleted
-                payload.task.isCompleted = isCompleted
-            },
+            .combinedClickable(
+                onClick = {
+                    isCompleted = !isCompleted
+                    payload.task.isCompleted = isCompleted
+                },
+                onLongClick = {
+                    showDeleteDialog = true
+                }
+            ),
         shadowElevation = 4.dp
-    ){
-        Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-        ){
-            Text(text = payload.task.text, style = TaskTextStyle.copy(
-                textDecoration = if (isCompleted)
-                TextDecoration.LineThrough
-            else
-                TextDecoration.None))
-    }}}
+    ) {
+        Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Text(
+                text = payload.task.text,
+                style = TaskTextStyle.copy(
+                    textDecoration = if (isCompleted)
+                        TextDecoration.LineThrough
+                    else
+                        TextDecoration.None
+                )
+            )
+        }
+    }
+
+    // Диалог подтверждения удаления
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Удалить задачу?") },
+            text = { Text("Вы уверены, что хотите удалить эту задачу?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    onDelete(payload)
+                    showDeleteDialog = false
+                }) {
+                    Text("Да")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Нет")
+                }
+            }
+        )
+    }
+}
+
 
 
 @Composable
