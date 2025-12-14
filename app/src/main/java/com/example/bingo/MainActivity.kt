@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.DpOffset
 import com.example.bingo.domain.SimpleTask
 import com.example.bingo.ui.theme.BingoTheme
 import com.example.bingo.ui.theme.TaskTextStyle
+import com.example.bingo.domain.AdvancedTask
 import com.example.bingo.domain.Task
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -102,6 +103,42 @@ fun TaskBlockTemplate(
             else
                 TextDecoration.None))
     }}}
+
+@Composable
+fun AdvancedTaskBlockTemplate(
+    color: Color,
+    advancedTask: AdvancedTask,
+    radius: Int = 12
+) {
+    Surface(
+        color = color,
+        shape = RoundedCornerShape(radius.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .wrapContentHeight()
+            .animateContentSize(), // плавное изменение высоты
+        shadowElevation = 4.dp
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            advancedTask.getAllTasks().forEach { task ->
+                Text(
+                    text = task.text,
+                    style = TaskTextStyle.copy(
+                        textDecoration = if (task.isCompleted)
+                            TextDecoration.LineThrough
+                        else
+                            TextDecoration.None
+                    ),
+                    modifier = Modifier
+                        .padding(vertical = 4.dp)
+                        .clickable {
+                            task.isCompleted = !task.isCompleted
+                        }
+                )
+            }
+        }
+    }
+}
 
 
 @Composable

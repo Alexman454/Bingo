@@ -34,6 +34,30 @@ class AdvancedTask(val tasks: MutableList<Task> = mutableListOf()) : SimpleTask(
     }
     fun getAllTasks(): List<Task> = tasks.toList()
 }
+
+class BingoTask(val bingoGrid: Array<Array<Task>>) : SimpleTask(Task(0, "Bingo Task Placeholder")) {
+    fun completeTaskAt(row: Int, col: Int) {
+        bingoGrid[row][col].isCompleted = true
+    }
+    fun resetGrid() {
+        for (row in bingoGrid) {
+            for (task in row) {
+                task.isCompleted = false
+            }
+        }
+    }
+    fun printGrid() {
+        for (row in bingoGrid) {
+            println(row.joinToString(" | ") { if (it.isCompleted) "✓ ${it.text}" else it.text })
+        }
+    }
+}
+
+/**
+ * Класс, управляющий списком задач и формированием бинго-сетки и
+ * отвечающий за добавление, удаление, завершение задач, генерацию бинго-сетки
+ * и получение задач с приближающимся сроком выполнения.
+ */
 class BingoManager {
     private val tasks = mutableListOf<Task>()
     private var idCounter = 1
@@ -106,4 +130,3 @@ class BingoManager {
         return tasks.filter { it.dueDate != null && it.dueDate!! - currentTime <= thresholdMillis }
     }
 }
-
