@@ -8,6 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -18,8 +19,15 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.Button
 import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Surface
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -30,9 +38,12 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.DpOffset
+import com.example.bingo.domain.SimpleTask
 import com.example.bingo.ui.theme.BingoTheme
 import com.example.bingo.ui.theme.TaskTextStyle
+import com.example.bingo.domain.Task
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,11 +54,20 @@ class MainActivity : ComponentActivity() {
                 val colorTaskBlock = colorResource(id = R.color.task_block_option1)
                 val colorBackground = colorResource(id = R.color.background_option1)
                 SetBackgroundColor(colorBackground)
-                TaskBlockTemplate(color = colorTaskBlock, radius = 12, offsetX = 12, offsetY = statusBarH)
-                TaskBlockTemplate(color = colorTaskBlock, radius = 12, offsetX = 12, offsetY = statusBarH+112.dp)
-                TaskBlockTemplate(color = colorTaskBlock, radius = 12, offsetX = 12, offsetY = statusBarH+224.dp)
-                TaskBlockTemplate(color = colorTaskBlock, radius = 12, offsetX = 12, offsetY = statusBarH+336.dp)
-            }
+                val task1 = SimpleTask(Task(1, "ОЧЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕНЬ ДЛИННЫЙ ТЕКСТ"))
+                val task2 = SimpleTask(Task(2, "Вторая задача", isCompleted = true))
+                var tasks = listOf(task1,task2)
+                LazyColumn(modifier = Modifier
+                    .fillMaxSize()
+                    .padding(
+                        top = statusBarH,
+                        start = 12.dp,
+                        end = 12.dp
+                    ),verticalArrangement = Arrangement.spacedBy(12.dp)){
+                items(tasks){task ->
+                    TaskBlockTemplate(color = colorTaskBlock, payload = task)
+                }
+            }}
         }
     }
 }
@@ -60,24 +80,29 @@ fun SetBackgroundColor(color: Color){
 @Composable
 fun TaskBlockTemplate(
     color: Color,
-    radius: Int = 1,
-    offsetX: Int = 0,
-    offsetY: Dp = 0.dp,
-    payload: String = "Placeholder Text"
+    radius: Int = 12,
+    payload: SimpleTask
 ){
     val configuration = Resources.getSystem().configuration
     val widthDp = configuration.screenWidthDp
+    val isCompleted = payload.task.isCompleted
     //val heightDp = configuration.screenHeightDp
     Surface(color = color,shape = RoundedCornerShape(radius.dp),
         modifier = Modifier
-            .size(width = (widthDp.dp - (offsetX*2).dp),height = 100.dp)
-            .absoluteOffset(x = offsetX.dp,y = offsetY),
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = 56.dp)
+            .wrapContentHeight(),
         shadowElevation = 4.dp
     ){
         Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
         ){
-            Text(text = payload, style = TaskTextStyle)
+            Text(text = payload.task.text, style = TaskTextStyle.copy(
+                textDecoration = if (isCompleted)
+                TextDecoration.LineThrough
+            else
+                TextDecoration.None))
     }}}
+
 
 @Composable
 fun getStatusBarH(): Dp {
