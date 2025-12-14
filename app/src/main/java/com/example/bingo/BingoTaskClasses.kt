@@ -1,4 +1,11 @@
 package com.example.bingo.domain
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.snapshots.SnapshotStateList
+
+sealed class DisplayableTask {
+    data class Simple(val simpleTask: SimpleTask) : DisplayableTask()
+    data class Advanced(val advancedTask: AdvancedTask) : DisplayableTask()
+}
 
 data class Task(
     val id: Int,
@@ -19,7 +26,7 @@ open class SimpleTask(val task: Task) {
     }
 }
 
-class AdvancedTask(val tasks: MutableList<Task> = mutableListOf()) : SimpleTask(Task(0, "Advanced Task Placeholder")) {
+class AdvancedTask(val tasks: SnapshotStateList<Task> = mutableStateListOf()) : SimpleTask(Task(0, "Advanced Task Placeholder")) {
     fun addTask(task: Task) {
         tasks.add(task)
     }
@@ -32,7 +39,7 @@ class AdvancedTask(val tasks: MutableList<Task> = mutableListOf()) : SimpleTask(
     override fun reset() {
         tasks.forEach { it.isCompleted = false }
     }
-    fun getAllTasks(): List<Task> = tasks.toList()
+    fun getAllTasks(): SnapshotStateList<Task> = tasks
 }
 
 class BingoTask(val bingoGrid: Array<Array<Task>>) : SimpleTask(Task(0, "Bingo Task Placeholder")) {

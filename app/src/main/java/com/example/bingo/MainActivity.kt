@@ -7,7 +7,9 @@ import android.util.DisplayMetrics
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
@@ -31,6 +33,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Surface
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.graphics.Color
@@ -45,6 +53,7 @@ import com.example.bingo.ui.theme.BingoTheme
 import com.example.bingo.ui.theme.TaskTextStyle
 import com.example.bingo.domain.AdvancedTask
 import com.example.bingo.domain.Task
+import com.example.bingo.domain.DisplayableTask
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,6 +67,15 @@ class MainActivity : ComponentActivity() {
                 val task1 = SimpleTask(Task(1, "ОЧЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕЕНЬ ДЛИННЫЙ ТЕКСТ"))
                 val task2 = SimpleTask(Task(2, "Вторая задача", isCompleted = true))
                 var tasks = listOf(task1,task2)
+                val advancedTask = AdvancedTask()
+                advancedTask.addTask(Task(1, "Задача 1"))
+                advancedTask.addTask(Task(2, "Задача 2"))
+                val displayTasks = remember { mutableStateListOf<DisplayableTask>() }
+                LaunchedEffect(Unit){
+                    displayTasks.add(DisplayableTask.Simple(task1))
+                    displayTasks.add(DisplayableTask.Advanced(advancedTask))
+                    displayTasks.add(DisplayableTask.Simple(task2))
+                }
                 LazyColumn(modifier = Modifier
                     .fillMaxSize()
                     .padding(
@@ -65,9 +83,11 @@ class MainActivity : ComponentActivity() {
                         start = 12.dp,
                         end = 12.dp
                     ),verticalArrangement = Arrangement.spacedBy(12.dp)){
-                items(tasks){task ->
-                    TaskBlockTemplate(color = colorTaskBlock, payload = task)
-                }
+                items(displayTasks){item ->
+                    when (item){
+                        is DisplayableTask.Simple -> TaskBlockTemplate(color = colorTaskBlock, payload = item.simpleTask)
+                        is DisplayableTask.Advanced -> AdvancedTaskBlockTemplate(color = colorTaskBlock, payload = item.advancedTask)
+                }}
             }}
         }
     }
@@ -104,10 +124,11 @@ fun TaskBlockTemplate(
                 TextDecoration.None))
     }}}
 
+
 @Composable
 fun AdvancedTaskBlockTemplate(
     color: Color,
-    advancedTask: AdvancedTask,
+    payload: AdvancedTask,
     radius: Int = 12
 ) {
     Surface(
@@ -116,15 +137,17 @@ fun AdvancedTaskBlockTemplate(
         modifier = Modifier
             .fillMaxWidth()
             .wrapContentHeight()
-            .animateContentSize(), // плавное изменение высоты
+            .animateContentSize(),
         shadowElevation = 4.dp
     ) {
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-            advancedTask.getAllTasks().forEach { task ->
+            payload.getAllTasks().forEach { task ->
+                var isCompleted by remember { mutableStateOf(task.isCompleted) }
+
                 Text(
                     text = task.text,
                     style = TaskTextStyle.copy(
-                        textDecoration = if (task.isCompleted)
+                        textDecoration = if (isCompleted)
                             TextDecoration.LineThrough
                         else
                             TextDecoration.None
@@ -132,13 +155,15 @@ fun AdvancedTaskBlockTemplate(
                     modifier = Modifier
                         .padding(vertical = 4.dp)
                         .clickable {
-                            task.isCompleted = !task.isCompleted
+                            isCompleted = !isCompleted
+                            task.isCompleted = isCompleted
                         }
                 )
             }
         }
     }
 }
+
 
 
 @Composable
