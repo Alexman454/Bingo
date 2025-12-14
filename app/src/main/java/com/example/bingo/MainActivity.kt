@@ -1,25 +1,17 @@
 package com.example.bingo
 
-
-import android.content.Context
 import android.os.Bundle
-import android.content.res.Resources
-import android.util.DisplayMetrics
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.Button
-import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -41,10 +33,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.text.style.TextDecoration
@@ -84,16 +74,12 @@ fun MainScreen() {
     val statusBarH = getStatusBarH()
     val displayTasks = remember { mutableStateListOf<DisplayableTask>() }
     val showDialog = remember { mutableStateOf(false) }
-
-    // НОВЫЕ СОСТОЯНИЯ ДЛЯ БИНГО
     val showBingoScreen = remember { mutableStateOf(false) }
     val currentBingoTask = remember { mutableStateOf<BingoTask?>(null) }
-    // -------------------------
 
     SetBackgroundColor(colorBackground)
 
     if (showBingoScreen.value && currentBingoTask.value != null) {
-        // Отображаем экран Бинго поверх всего
         BingoScreen(
             bingoTask = currentBingoTask.value!!,
             onClose = {
@@ -102,7 +88,6 @@ fun MainScreen() {
             }
         )
     } else {
-        // Основной экран со списком задач
         Box(modifier = Modifier.fillMaxSize()) {
             LazyColumn(
                 modifier = Modifier
@@ -138,8 +123,6 @@ fun MainScreen() {
                     }
                 }
             }
-
-            // ... (Floating Action Buttons - остаются без изменений)
 
             FloatingActionButton(
                 onClick = { showDialog.value = true },
@@ -327,7 +310,6 @@ fun AddTaskDialog(
     showDialog: MutableState<Boolean>,
     displayTasks: MutableList<DisplayableTask>
 ) {
-    // Оборачиваем список задач в state, чтобы Compose реагировал на изменения
     val tasksState = remember { mutableStateListOf<DisplayableTask>().apply { addAll(displayTasks) } }
 
     val mainTaskText = remember { mutableStateOf("") }
@@ -346,7 +328,6 @@ fun AddTaskDialog(
             title = { Text("Новая задача") },
             text = {
                 Column {
-                    // Тип задачи
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
@@ -525,7 +506,6 @@ fun BingoBlockTemplate(
         }
     }
 
-    // Диалог подтверждения удаления (аналогично SimpleTask)
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
