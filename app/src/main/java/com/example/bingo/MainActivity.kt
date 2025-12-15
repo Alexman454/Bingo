@@ -68,6 +68,10 @@ import com.example.bingo.domain.SimpleTask
 import com.example.bingo.domain.Task
 import com.example.bingo.domain.TaskType
 
+
+/**
+ * Главная активность приложения Bingo.
+ */
 class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -80,11 +84,21 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
+/**
+ * Устанавливает цвет фона для всего экрана.
+ *
+ * @param color цвет фона.
+ */
 @Composable
 fun SetBackgroundColor(color: Color){
     Surface(color = color, modifier = Modifier.fillMaxSize()){
     }
 }
+
+/**
+ * Главный экран приложения, отображающий список задач и кнопки добавления/настроек.
+ */
 @Composable
 fun MainScreen() {
     val colorTaskBlock = colorResource(id = R.color.task_block_option1)
@@ -168,6 +182,14 @@ fun MainScreen() {
     }
 }
 
+/**
+ * Шаблон отображения простой задачи.
+ *
+ * @param color цвет блока задачи.
+ * @param radius радиус скругления блока.
+ * @param payload задача для отображения.
+ * @param onDelete функция удаления задачи.
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TaskBlockTemplate(
@@ -236,6 +258,14 @@ fun TaskBlockTemplate(
     }
 }
 
+/**
+* Шаблон отображения продвинутой задачи с подзадачами.
+*
+* @param color цвет блока задачи.
+* @param payload задача для отображения.
+* @param displayTasks список всех отображаемых задач.
+* @param radius радиус скругления блока.
+*/
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AdvancedTaskBlockTemplate(
@@ -316,6 +346,9 @@ fun AdvancedTaskBlockTemplate(
     }
 }
 
+/**
+ * Возвращает высоту статус-бара.
+ */
 @Composable
 fun getStatusBarH(): Dp {
     val statusBarInsets = WindowInsets.statusBars.asPaddingValues()
@@ -323,6 +356,12 @@ fun getStatusBarH(): Dp {
     return statusBarHeightDp
 }
 
+/**
+ * Диалог создания новой задачи.
+ *
+ * @param showDialog состояние видимости диалога.
+ * @param displayTasks список отображаемых задач.
+ */
 @Composable
 fun AddTaskDialog(
     showDialog: MutableState<Boolean>,
@@ -511,7 +550,15 @@ fun AddTaskDialog(
 
 
 
-
+/**
+ * Шаблон отображения блока Bingo.
+ *
+ * @param color цвет блока.
+ * @param radius радиус скругления.
+ * @param payload бинго задача.
+ * @param onOpenBingo действие при открытии Bingo.
+ * @param onDelete действие при удалении Bingo.
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun BingoBlockTemplate(
@@ -568,7 +615,12 @@ fun BingoBlockTemplate(
     }
 }
 
-
+/**
+ * Экран отображения Bingo сетки.
+ *
+ * @param bingoTask бинго задача для отображения.
+ * @param onClose действие при закрытии экрана.
+ */
 @Composable
 fun BingoScreen(
     bingoTask: BingoTask,
@@ -642,7 +694,14 @@ fun BingoScreen(
     }
 }
 
-
+/**
+ * Ячейка Bingo сетки.
+ *
+ * @param task задача в ячейке.
+ * @param isCompleted статус выполнения задачи.
+ * @param color цвет блока.
+ * @param onClick действие при клике на ячейку.
+ */
 @Composable
 fun RowScope.BingoTaskCell(
     task: Task,
@@ -671,7 +730,11 @@ fun RowScope.BingoTaskCell(
     }
 }
 
-
+/**
+ * Отображение превью списка задач для Advanced и Bingo.
+ *
+ * @param items список строк задач.
+ */
 @Composable
 fun TaskPreviewList(items: MutableList<String>) {
     Column {
