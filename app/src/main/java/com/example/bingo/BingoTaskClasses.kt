@@ -1,6 +1,10 @@
 package com.example.bingo.domain
 
 import androidx.compose.runtime.mutableStateListOf
+
+enum class TaskType {
+    SIMPLE, ADVANCED, BINGO
+}
 sealed class DisplayableTask {
     data class Simple(val simpleTask: SimpleTask) : DisplayableTask()
     data class Advanced(val advancedTask: AdvancedTask) : DisplayableTask()
@@ -64,22 +68,22 @@ class AdvancedTask(
  * Бинго-сетка
  */
 class BingoTask(
-    val bingoGrid: Array<Array<Task>>
+    val size: Int,
+    tasks: List<Task>
 ) {
-    var stateGrid: Array<Array<Task>> = Array(3) { row ->
-        Array(3) { col -> bingoGrid[row][col] }
+    val stateGrid: Array<Array<Task>> =
+        Array(size) { row ->
+            Array(size) { col ->
+                tasks[row * size + col]
+            }
+        }
+
+    fun resetGrid() {
+        stateGrid.flatten().forEach { it.isCompleted = false }
     }
 
     fun completeTaskAt(row: Int, col: Int) {
         stateGrid[row][col].isCompleted = true
-    }
-
-    fun resetGrid() {
-        for (row in stateGrid) {
-            for (task in row) {
-                task.isCompleted = false
-            }
-        }
     }
 
     fun printGrid() {
@@ -115,15 +119,23 @@ class BingoManager {
         tasks.forEach { it.isCompleted = false }
     }
 
-    fun generateBingoGrid(): Array<Array<Task>> {
-        if (tasks.size < 9) throw IllegalStateException("Недостаточно задач: нужно минимум 9")
-        val selected = tasks.shuffled().take(9)
-        return Array(3) { row ->
-            Array(3) { col ->
-                selected[row * 3 + col]
-            }
-        }
+    fun generateBingo(): BingoTask {
+        if (tasks.size < 4)
+            throw IllegalStateException("Минимум 4 цели для Bingo")
+
+        val size = kotlin.math.sqrt(tasks.size.toDouble())
+            .toInt()
+            .coerceIn(2, 5)
+
+        val needed = size * size
+        val selected = tasks.shuffled().take(needed)
+
+        return BingoTask(
+            size = size,
+            tasks = selected
+        )
     }
+
 
     fun getTasksDueSoon(currentTime: Long, thresholdMillis: Long = 3600000): List<Task> {
         return tasks.filter { it.dueDate != null && it.dueDate!! - currentTime <= thresholdMillis }
