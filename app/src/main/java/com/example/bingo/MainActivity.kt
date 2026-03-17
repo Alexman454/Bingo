@@ -67,8 +67,11 @@ import com.example.bingo.domain.DisplayableTask
 import com.example.bingo.domain.SimpleTask
 import com.example.bingo.domain.Task
 import com.example.bingo.domain.TaskType
-
-
+import com.example.bingo.data.local.AppDatabase
+import com.example.bingo.data.repository.TaskRepository
+import com.example.bingo.ui.TaskViewModel
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 /**
  * Главная активность приложения Bingo.
  */
@@ -76,10 +79,14 @@ class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val database = AppDatabase.getDatabase(this)
+        val repository = TaskRepository(database.taskDao())
+        val viewModel = TaskViewModel(repository)
         enableEdgeToEdge()
         setContent {
             BingoTheme {
-                MainScreen()
+                MainScreen(viewModel)
             }
         }
     }
@@ -100,11 +107,11 @@ fun SetBackgroundColor(color: Color){
  * Главный экран приложения, отображающий список задач и кнопки добавления/настроек.
  */
 @Composable
-fun MainScreen() {
+fun MainScreen(viewModel: TaskViewModel) {
+    val tasks by viewModel.tasks.collectAsState()
     val colorTaskBlock = colorResource(id = R.color.task_block_option1)
     val colorBackground = colorResource(id = R.color.background_option1)
     val statusBarH = getStatusBarH()
-    val displayTasks = remember { mutableStateListOf<DisplayableTask>() }
     val showDialog = remember { mutableStateOf(false) }
     val showBingoScreen = remember { mutableStateOf(false) }
     val currentBingoTask = remember { mutableStateOf<BingoTask?>(null) }
@@ -124,37 +131,37 @@ fun MainScreen() {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(top = statusBarH, start = 12.dp, end = 12.dp),
+                    .padding(top = 12.dp, start = 12.dp, end = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(displayTasks) { item ->
-                    when (item) {
-                        is DisplayableTask.Simple -> TaskBlockTemplate(
-                            color = colorTaskBlock,
-                            payload = item.simpleTask,
-                            onDelete = { task ->
-                                displayTasks.removeIf { it is DisplayableTask.Simple && it.simpleTask == task }
-                            }
-                        )
-                        is DisplayableTask.Advanced -> AdvancedTaskBlockTemplate(
-                            color = colorTaskBlock,
-                            payload = item.advancedTask,
-                            displayTasks = displayTasks
-                        )
-                        is DisplayableTask.Bingo -> BingoBlockTemplate( // <-- ОБРАБОТКА БИНГО БЛОКА
-                            color = colorTaskBlock,
-                            payload = item.bingoTask,
-                            onOpenBingo = { bingoTask ->
-                                currentBingoTask.value = bingoTask
-                                showBingoScreen.value = true
-                            },
-                            onDelete = { bingoTask ->
-                                displayTasks.removeIf { it is DisplayableTask.Bingo && it.bingoTask == bingoTask }
-                            }
-                        )
-                    }
+                items(tasks) { task ->  // task: TaskEntity
+                    TaskBlockTemplate(
+                        text = task.text,
+                        isCompleted = task.isCompleted,
+                        onClick = { viewModel.toggleCompleted(task) },
+                        onDelete = { viewModel.deleteTask(task) }
+                    )
                 }
             }
+//                        is DisplayableTask.Advanced -> AdvancedTaskBlockTemplate(
+//                            color = colorTaskBlock,
+//                            payload = item.advancedTask,
+//                            displayTasks = displayTasks
+//                        )
+//                        is DisplayableTask.Bingo -> BingoBlockTemplate( // <-- ОБРАБОТКА БИНГО БЛОКА
+//                            color = colorTaskBlock,
+//                            payload = item.bingoTask,
+//                            onOpenBingo = { bingoTask ->
+//                                currentBingoTask.value = bingoTask
+//                                showBingoScreen.value = true
+//                            },
+//                            onDelete = { bingoTask ->
+//                                displayTasks.removeIf { it is DisplayableTask.Bingo && it.bingoTask == bingoTask }
+//                            }
+//                        )
+//                    }
+//                }
+//            }
 
             FloatingActionButton(
                 onClick = { showDialog.value = true },
@@ -176,7 +183,7 @@ fun MainScreen() {
 
             AddTaskDialog(
                 showDialog = showDialog,
-                displayTasks = displayTasks
+                viewModel = viewModel
             )
         }
     }
@@ -193,66 +200,49 @@ fun MainScreen() {
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TaskBlockTemplate(
-    color: Color,
-    radius: Int = 12,
-    payload: SimpleTask,
-    onDelete: (SimpleTask) -> Unit
-){
-    var isCompleted by remember { mutableStateOf(payload.task.isCompleted) }
+    text: String,
+    isCompleted: Boolean,
+    onClick: () -> Unit,
+    onDelete: () -> Unit
+) {
+
     var showDeleteDialog by remember { mutableStateOf(false) }
 
-    // Сначала сам блок задачи
     Surface(
-        color = color,
-        shape = RoundedCornerShape(radius.dp),
+        color = if (isCompleted) Color(0xFFB2FF59) else Color(0xFFE0E0E0),
+        shape = RoundedCornerShape(12.dp),
         modifier = Modifier
             .fillMaxWidth()
             .defaultMinSize(minHeight = 56.dp)
-            .wrapContentHeight()
-            .animateContentSize()
             .combinedClickable(
-                onClick = {
-                    isCompleted = !isCompleted
-                    payload.task.isCompleted = isCompleted
-                },
-                onLongClick = {
-                    showDeleteDialog = true
-                }
+                onClick = onClick,
+                onLongClick = { showDeleteDialog = true }
             ),
         shadowElevation = 4.dp
     ) {
-        Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+        Box(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = payload.task.text,
-                style = TaskTextStyle.copy(
-                    textDecoration = if (isCompleted)
-                        TextDecoration.LineThrough
-                    else
-                        TextDecoration.None
+                text = text,
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    textDecoration = if (isCompleted) TextDecoration.LineThrough else TextDecoration.None
                 )
             )
         }
     }
 
-    // Диалог подтверждения удаления
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            containerColor = color, // цвет блока задачи
             title = { Text("Удалить задачу?") },
             text = { Text("Вы уверены, что хотите удалить эту задачу?") },
             confirmButton = {
                 TextButton(onClick = {
-                    onDelete(payload)
+                    onDelete()
                     showDeleteDialog = false
-                }) {
-                    Text("Да")
-                }
+                }) { Text("Да") }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Нет")
-                }
+                TextButton(onClick = { showDeleteDialog = false }) { Text("Нет") }
             }
         )
     }
@@ -365,10 +355,9 @@ fun getStatusBarH(): Dp {
 @Composable
 fun AddTaskDialog(
     showDialog: MutableState<Boolean>,
-    displayTasks: MutableList<DisplayableTask>
+    viewModel: TaskViewModel
 ) {
     if (!showDialog.value) return
-
     val taskType = remember { mutableStateOf(TaskType.SIMPLE) }
     val inputText = remember { mutableStateOf("") }
 
@@ -500,11 +489,7 @@ fun AddTaskDialog(
 
                     TaskType.SIMPLE -> {
                         if (inputText.value.isNotBlank()) {
-                            displayTasks.add(
-                                DisplayableTask.Simple(
-                                    SimpleTask(Task(0, inputText.value))
-                                )
-                            )
+                            viewModel.addSimpleTask(inputText.value)
                         }
                     }
 
@@ -514,9 +499,9 @@ fun AddTaskDialog(
                             advancedSubTasks.forEachIndexed { index, text ->
                                 advancedTask.addTask(Task(index, text))
                             }
-                            displayTasks.add(
-                                DisplayableTask.Advanced(advancedTask)
-                            )
+                            //displayTasks.add(
+                            //    DisplayableTask.Advanced(advancedTask)
+                            //)
                         }
                     }
 
@@ -525,11 +510,11 @@ fun AddTaskDialog(
                             val manager = BingoManager()
                             bingoTasks.forEach { manager.addTask(it) }
 
-                            displayTasks.add(
-                                DisplayableTask.Bingo(
-                                    manager.generateBingo()
-                                )
-                            )
+                            //displayTasks.add(
+                            //    DisplayableTask.Bingo(
+                            //        manager.generateBingo()
+                            //    )
+                            //)
                         }
                     }
                 }
